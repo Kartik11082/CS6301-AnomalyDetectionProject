@@ -1,0 +1,64 @@
+seed: 42
+
+embedding:
+  projection_name: policy_projection
+  node_labels:
+    - Policy
+    - Action
+    - NotAction
+    - Resource
+    - NotResource
+  relationship_types:
+    - ALLOWS
+    - DENIES
+    - WORKS_ON
+    - WORKS_NOT_ON
+  embedding_dimension: 64
+  iterations: 20
+  walk_length: 80
+  random_seed: 42
+  write_property: embeddingNode2vec
+
+split:
+  seed: 42
+  normal_test_size: 0.1
+  train_normal_only: true
+
+enabled_models:
+  - isolation_forest
+  - local_outlier_factor
+  - one_class_svm
+  - elliptic_envelope
+
+hyperparameters:
+  isolation_forest:
+    contamination: auto
+    n_estimators: 200
+  local_outlier_factor:
+    n_neighbors: 20
+    contamination: auto
+  one_class_svm:
+    kernel: rbf
+    gamma: scale
+    nu: 0.1
+  elliptic_envelope:
+    contamination: 0.1
+
+grid_search:
+  enabled: true
+  metric: roc_auc
+  param_grids:
+    isolation_forest:
+      n_estimators: [10, 30, 50, 100]
+      contamination: [auto]
+    local_outlier_factor:
+      n_neighbors: [3, 5, 10, 15, 20]
+      contamination: [auto]
+    one_class_svm:
+      kernel: [rbf]
+      gamma: [0.0001, 0.001, 0.01, scale]
+      nu: [0.1, 0.3, 0.5, 0.7]
+    elliptic_envelope:
+      contamination: [0.01, 0.05, 0.1, 0.2]
+
+recompute_embeddings_after_update: true

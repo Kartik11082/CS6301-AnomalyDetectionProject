@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.venv/
+outputs/logs/*.json
+outputs/logs/*.csv
+outputs/metrics/*.csv
+outputs/metrics/*.md
+outputs/predictions/*.csv
+

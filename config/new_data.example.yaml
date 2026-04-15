@@ -1,0 +1,33 @@
+dataset_path: data/new_snapshot.xlsx
+
+required_sheets:
+  - policies
+  - users
+  - groups
+  - roles
+
+required_columns:
+  policies:
+    - PolicyName
+    - PolicyId
+    - Arn
+    - PolicyObject
+  users:
+    - UserName
+    - UserId
+    - Arn
+    - AttachedPolicies
+  groups:
+    - GroupName
+    - GroupId
+    - Arn
+    - AttachedPolicies
+    - Users
+  roles:
+    - RoleName
+    - RoleId
+    - Arn
+    - AttachedPolicies
+
+misconfigured_policies_by_name: []
+misconfigured_policies_by_id: []
