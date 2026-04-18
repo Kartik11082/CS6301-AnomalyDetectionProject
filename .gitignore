@@ -3,9 +3,6 @@ __pycache__/
 .venv/
 outputs/logs/*.json
 outputs/logs/*.csv
-outputs/metrics/*.csv
-outputs/metrics/*.md
-outputs/predictions/*.csv
 
 .claude
 __pycache__/
