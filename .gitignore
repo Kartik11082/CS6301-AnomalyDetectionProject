@@ -7,3 +7,8 @@ outputs/metrics/*.csv
 outputs/metrics/*.md
 outputs/predictions/*.csv
 
+.claude
+__pycache__/
+*.pyc
+venv
+steps.md

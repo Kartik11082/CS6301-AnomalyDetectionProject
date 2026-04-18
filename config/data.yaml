@@ -32,6 +32,7 @@ required_columns:
 # Label source for anomaly evaluation.
 # Edit these lists to match your known misconfigured policies.
 misconfigured_policies_by_name:
+  # --- obvious anomalies (literal wildcards) ---
   - tf-secmon-iam-policy
   - tf-splunk-ingestion-aws-addon-policy-master20200917101618881200000005
   - tf-customconfig-policy-master
@@ -45,5 +46,18 @@ misconfigured_policies_by_name:
   - AWSOpsWorksRegisterCLI
   - AWSCodeStarServiceRole
   - AWSApplicationMigrationReplicationServerPolicy
+  # --- subtle anomalies (broad-but-not-*, cross-account, dangerous combos) ---
+  - tf-s3-reader-all-buckets
+  - tf-ec2-describe-all
+  - tf-iam-user-management-broad
+  - tf-sts-cross-account-assume
+  - tf-lambda-deploy-broad
+  - tf-kms-decrypt-broad
+  - tf-data-pipeline-passrole
+  - tf-logs-reader-all-accounts
+  - tf-notaction-restricted-allow
+  - tf-ssm-parameter-access-all
+  - tf-secretsmanager-rotation-broad
+  - tf-dynamodb-cross-account-stream
 
 misconfigured_policies_by_id: []
