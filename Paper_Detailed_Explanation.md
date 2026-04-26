@@ -54,7 +54,7 @@ An IAM policy in AWS is a JSON document that looks like this:
 }
 ```
 
-This particular policy says: **Allow ALL actions on ALL resources.** This is the `AdministratorAccess` policy — it gives full god-mode access to everything. If this gets attached to the wrong person, it's a security disaster.
+This particular policy says: **Allow ALL actions on ALL resources.** This is the `AdministratorAccess` policy — it gives full god-mode access to everything. If this gets attached to the wrong person, it is a security disaster.
 
 **How the pieces fit together:**
 
