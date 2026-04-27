@@ -1,53 +1,53 @@
 # Dataset Side-by-Side Analysis
 
-**Fidelity score: 86.2/100**  _(higher = synthetic closer to real)_
+**Fidelity score: 100.0/100**  _(higher = synthetic closer to real)_
 
 
 ## Policies
 
 | Metric                                   |                 Real |            Synthetic | Note |
 | ---------------------------------------- | -------------------- | -------------------- |  |
-| Row count                                |                  515 |                  325 |  |
-| Labeled anomalies (n / %)                |             4 / 0.8% |            25 / 7.7% | (!) gap=0.07 |
-| AttachmentCount mean                     |                0.008 |                0.151 | ok |
+| Row count                                |                  840 |                  325 |  |
+| Labeled anomalies (n / %)                |            29 / 3.5% |            25 / 7.7% | ok |
+| AttachmentCount mean                     |                0.070 |                0.169 | ok |
 | AttachmentCount median                   |                0.000 |                0.000 | ok |
 | AttachmentCount max                      |                    3 |                    3 |  |
-| Statements / policy (mean)               |                2.258 |                1.889 | ok |
-| Statements / policy (median)             |                1.000 |                2.000 |  |
-| Statements / policy (max)                |                   19 |                    3 |  |
-| Wildcard-action policies                 |          168 (32.6%) |          120 (36.9%) | ok |
-| Wildcard-resource policies               |          495 (96.1%) |            18 (5.5%) |  |
-| Allow ratio (of all stmts)               |                0.996 |                1.000 | ok |
-| Deny ratio (of all stmts)                |                0.004 |                0.000 |  |
+| Statements / policy (mean)               |                2.165 |                2.018 | ok |
+| Statements / policy (median)             |                2.000 |                2.000 |  |
+| Statements / policy (max)                |                   19 |                    5 |  |
+| Wildcard-action policies                 |          276 (32.9%) |          108 (33.2%) | ok |
+| Wildcard-resource policies               |          513 (61.1%) |            18 (5.5%) |  |
+| Allow ratio (of all stmts)               |                0.997 |                1.000 | ok |
+| Deny ratio (of all stmts)                |                0.003 |                0.000 |  |
 
 ### Path Distribution (policies)
 
 | Path | Real | Synthetic |
 | --- | --- | --- |
-| `/` | 66.6% | 36.6% |
-| `/aws-service-role/` | 14.4% | 30.5% |
-| `/job-function/` | 1.4% | — |
-| `/service-role/` | 17.7% | 32.9% |
+| `/` | 54.8% | 36.0% |
+| `/aws-service-role/` | 21.2% | 32.0% |
+| `/job-function/` | 0.8% | — |
+| `/service-role/` | 23.2% | 32.0% |
 
 ### DefaultVersionId Distribution (policies)
 
 | VersionId | Real | Synthetic |
 | --- | --- | --- |
-| `v1` | 55.1% | — |
-| `v2` | 17.7% | 18.2% |
-| `v3` | 10.3% | 18.8% |
-| `v4` | 5.2% | 20.0% |
-| `v6` | — | 16.3% |
+| `v1` | 39.4% | — |
+| `v2` | 17.9% | 18.2% |
+| `v3` | 12.9% | 16.9% |
+| `v4` | 10.5% | 18.8% |
+| `v6` | — | 17.5% |
 
 
 ## Users
 
 | Metric                                   |                 Real |            Synthetic | Note |
 | ---------------------------------------- | -------------------- | -------------------- |  |
-| Row count                                |                    1 |                  200 |  |
-| AttachedPolicies mean                    |                2.000 |                2.825 | ok |
-| AttachedPolicies median                  |                2.000 |                3.000 |  |
-| AttachedPolicies max                     |                    2 |                    5 |  |
+| Row count                                |                  201 |                  200 |  |
+| AttachedPolicies mean                    |                2.811 |                2.815 | ok |
+| AttachedPolicies median                  |                3.000 |                3.000 |  |
+| AttachedPolicies max                     |                    5 |                    5 |  |
 | Users with 0 policies (%)                |                 0.0% |                 0.0% |  |
 
 
@@ -55,29 +55,29 @@
 
 | Metric                                   |                 Real |            Synthetic | Note |
 | ---------------------------------------- | -------------------- | -------------------- |  |
-| Row count                                |                    1 |                   25 |  |
-| AttachedPolicies mean                    |                0.000 |                2.640 |  |
-| AttachedPolicies max                     |                    0 |                    6 |  |
-| Users per group mean                     |                1.000 |                8.160 |  |
-| Users per group max                      |                    1 |                   15 |  |
-| Groups with 0 policies (%)               |               100.0% |                16.0% |  |
-| Groups with 0 users (%)                  |                 0.0% |                 8.0% |  |
+| Row count                                |                   26 |                   25 |  |
+| AttachedPolicies mean                    |                2.500 |                2.600 |  |
+| AttachedPolicies max                     |                    6 |                    6 |  |
+| Users per group mean                     |                7.192 |                7.440 |  |
+| Users per group max                      |                   14 |                   14 |  |
+| Groups with 0 policies (%)               |                19.2% |                16.0% |  |
+| Groups with 0 users (%)                  |                 7.7% |                 8.0% |  |
 
 
 ## Roles
 
 | Metric                                   |                 Real |            Synthetic | Note |
 | ---------------------------------------- | -------------------- | -------------------- |  |
-| Row count                                |                    1 |                   40 |  |
-| AttachedPolicies mean                    |                1.000 |                3.275 |  |
-| AttachedPolicies median                  |                1.000 |                3.000 |  |
-| AttachedPolicies max                     |                    1 |                    6 |  |
+| Row count                                |                   41 |                   40 |  |
+| AttachedPolicies mean                    |                3.000 |                3.050 |  |
+| AttachedPolicies median                  |                3.000 |                3.000 |  |
+| AttachedPolicies max                     |                    6 |                    6 |  |
 | Roles with 0 policies (%)                |                 0.0% |                 0.0% |  |
 
 ## Fidelity Breakdown
 
-- Anomaly ratio gap 6.9pp (real=0.8%, syn=7.7%) -14pts
+- No major gaps detected.
 
 ## Recommendations
 
-1. **Wildcard actions are overrepresented** in synthetic data. In the real dataset no normal policy uses `*` actions — keep wildcards exclusively in labeled anomaly rows.
+1. Synthetic dataset is a reasonable structural match. Focus next on embedding-space overlap verification.

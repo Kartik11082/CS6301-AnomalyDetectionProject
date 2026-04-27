@@ -27,6 +27,7 @@ import yaml
 # Low-level helpers
 # ---------------------------------------------------------------------------
 
+
 def _load(path: str, sheet: str) -> pd.DataFrame:
     return pd.read_excel(path, sheet_name=sheet, engine="openpyxl")
 
@@ -100,6 +101,7 @@ def _pct(n: int, total: int) -> str:
 # Per-sheet analysis
 # ---------------------------------------------------------------------------
 
+
 def analyse_policies(real_path: str, syn_path: str, label_names: list[str]) -> dict:
     r = _load(real_path, "policies")
     s = _load(syn_path, "policies")
@@ -132,8 +134,10 @@ def analyse_policies(real_path: str, syn_path: str, label_names: list[str]) -> d
 
         s_ser = pd.Series(n_stmts_per_policy)
         return {
-            "tag": tag, "n": n,
-            "n_anomaly": int(n_anomaly), "anomaly_pct": _pct(int(n_anomaly), n),
+            "tag": tag,
+            "n": n,
+            "n_anomaly": int(n_anomaly),
+            "anomaly_pct": _pct(int(n_anomaly), n),
             "attachment_mean": round(float(ac.mean()), 3),
             "attachment_median": float(ac.median()),
             "attachment_max": int(ac.max()),
@@ -153,7 +157,7 @@ def analyse_policies(real_path: str, syn_path: str, label_names: list[str]) -> d
 
     return {
         "real": policy_stats(r, "real"),
-        "syn":  policy_stats(s, "syn"),
+        "syn": policy_stats(s, "syn"),
     }
 
 
@@ -199,6 +203,7 @@ def analyse_groups(real_path: str, syn_path: str) -> dict:
 # Fidelity score (0–100, higher = more realistic synthetic)
 # ---------------------------------------------------------------------------
 
+
 def _pct_to_f(s: str) -> float:
     return float(s.rstrip("%")) / 100
 
@@ -209,24 +214,28 @@ def fidelity_score(p: dict, u: dict, g: dict, r_roles: dict) -> tuple[float, lis
 
     # 1. Anomaly ratio — real has ~2.5% labeled, synthetic has ~4.2%
     real_ar = _pct_to_f(p["real"]["anomaly_pct"])
-    syn_ar  = _pct_to_f(p["syn"]["anomaly_pct"])
+    syn_ar = _pct_to_f(p["syn"]["anomaly_pct"])
     ar_diff = abs(syn_ar - real_ar)
     if ar_diff > 0.05:
         deduct = min(20, ar_diff * 200)
         score -= deduct
-        notes.append(f"Anomaly ratio gap {ar_diff*100:.1f}pp (real={p['real']['anomaly_pct']}, syn={p['syn']['anomaly_pct']}) -{deduct:.0f}pts")
+        notes.append(
+            f"Anomaly ratio gap {ar_diff*100:.1f}pp (real={p['real']['anomaly_pct']}, syn={p['syn']['anomaly_pct']}) -{deduct:.0f}pts"
+        )
 
     # 2. AttachmentCount — real median 0, syn median ~13
     ac_real = p["real"]["attachment_median"]
-    ac_syn  = p["syn"]["attachment_median"]
+    ac_syn = p["syn"]["attachment_median"]
     if abs(ac_real - ac_syn) > 3:
         deduct = min(20, abs(ac_real - ac_syn) * 1.5)
         score -= deduct
-        notes.append(f"AttachmentCount median gap {abs(ac_real - ac_syn):.0f} (real={ac_real}, syn={ac_syn}) -{deduct:.0f}pts")
+        notes.append(
+            f"AttachmentCount median gap {abs(ac_real - ac_syn):.0f} (real={ac_real}, syn={ac_syn}) -{deduct:.0f}pts"
+        )
 
     # 3. Wildcard action policies — real ~0%, synthetic has labeled ones
     wc_real = _pct_to_f(p["real"]["wc_action_pct"])
-    wc_syn  = _pct_to_f(p["syn"]["wc_action_pct"])
+    wc_syn = _pct_to_f(p["syn"]["wc_action_pct"])
     wc_diff = abs(wc_syn - wc_real)
     if wc_diff > 0.10:
         deduct = min(15, wc_diff * 100)
@@ -235,27 +244,33 @@ def fidelity_score(p: dict, u: dict, g: dict, r_roles: dict) -> tuple[float, lis
 
     # 4. Statements per policy distribution
     sm_real = p["real"]["stmts_mean"]
-    sm_syn  = p["syn"]["stmts_mean"]
+    sm_syn = p["syn"]["stmts_mean"]
     if abs(sm_real - sm_syn) > 1.5:
         deduct = min(15, abs(sm_real - sm_syn) * 3)
         score -= deduct
-        notes.append(f"Statements/policy mean gap {abs(sm_real - sm_syn):.2f} (real={sm_real}, syn={sm_syn}) -{deduct:.0f}pts")
+        notes.append(
+            f"Statements/policy mean gap {abs(sm_real - sm_syn):.2f} (real={sm_real}, syn={sm_syn}) -{deduct:.0f}pts"
+        )
 
     # 5. User attached-policy distribution
     u_real = u["real"]["attached_mean"]
-    u_syn  = u["syn"]["attached_mean"]
+    u_syn = u["syn"]["attached_mean"]
     if abs(u_real - u_syn) > 2:
         deduct = min(10, abs(u_real - u_syn) * 2)
         score -= deduct
-        notes.append(f"User AttachedPolicies mean gap {abs(u_real - u_syn):.2f} -{deduct:.0f}pts")
+        notes.append(
+            f"User AttachedPolicies mean gap {abs(u_real - u_syn):.2f} -{deduct:.0f}pts"
+        )
 
     # 6. Allow/Deny ratio
     allow_real = p["real"]["allow_ratio"]
-    allow_syn  = p["syn"]["allow_ratio"]
+    allow_syn = p["syn"]["allow_ratio"]
     if abs(allow_real - allow_syn) > 0.05:
         deduct = min(10, abs(allow_real - allow_syn) * 100)
         score -= deduct
-        notes.append(f"Allow-ratio gap {abs(allow_real - allow_syn):.3f} (real={allow_real}, syn={allow_syn}) -{deduct:.0f}pts")
+        notes.append(
+            f"Allow-ratio gap {abs(allow_real - allow_syn):.3f} (real={allow_real}, syn={allow_syn}) -{deduct:.0f}pts"
+        )
 
     return round(max(0.0, score), 1), notes
 
@@ -264,12 +279,18 @@ def fidelity_score(p: dict, u: dict, g: dict, r_roles: dict) -> tuple[float, lis
 # Report rendering
 # ---------------------------------------------------------------------------
 
+
 def _row(label: str, real_val: str, syn_val: str, flag: str = "") -> str:
     return f"| {label:<40} | {real_val:>20} | {syn_val:>20} | {flag} |"
 
 
 def _header(title: str) -> str:
-    return f"\n## {title}\n\n" + _row("Metric", "Real", "Synthetic", "Note") + "\n" + _row("-" * 40, "-" * 20, "-" * 20, "")
+    return (
+        f"\n## {title}\n\n"
+        + _row("Metric", "Real", "Synthetic", "Note")
+        + "\n"
+        + _row("-" * 40, "-" * 20, "-" * 20, "")
+    )
 
 
 def _flag(real_v: float, syn_v: float, threshold: float, fmt: str = ".2f") -> str:
@@ -278,26 +299,95 @@ def _flag(real_v: float, syn_v: float, threshold: float, fmt: str = ".2f") -> st
     return "ok"
 
 
-def build_markdown(p: dict, u: dict, g: dict, r_roles: dict,
-                   score: float, notes: list[str]) -> str:
-    lines = ["# Dataset Side-by-Side Analysis", "",
-             f"**Fidelity score: {score}/100**  _(higher = synthetic closer to real)_", ""]
+def build_markdown(
+    p: dict, u: dict, g: dict, r_roles: dict, score: float, notes: list[str]
+) -> str:
+    lines = [
+        "# Dataset Side-by-Side Analysis",
+        "",
+        f"**Fidelity score: {score}/100**  _(higher = synthetic closer to real)_",
+        "",
+    ]
 
     # Policies
     rp, sp = p["real"], p["syn"]
     lines.append(_header("Policies"))
-    lines.append(_row("Row count",                  str(rp["n"]),                    str(sp["n"])))
-    lines.append(_row("Labeled anomalies (n / %)",  f"{rp['n_anomaly']} / {rp['anomaly_pct']}", f"{sp['n_anomaly']} / {sp['anomaly_pct']}", _flag(rp["n_anomaly"]/rp["n"], sp["n_anomaly"]/sp["n"], 0.05)))
-    lines.append(_row("AttachmentCount mean",        _fmt(rp["attachment_mean"]),     _fmt(sp["attachment_mean"]),     _flag(rp["attachment_mean"],  sp["attachment_mean"],  2)))
-    lines.append(_row("AttachmentCount median",      _fmt(rp["attachment_median"]),   _fmt(sp["attachment_median"]),   _flag(rp["attachment_median"],sp["attachment_median"],2)))
-    lines.append(_row("AttachmentCount max",         str(rp["attachment_max"]),       str(sp["attachment_max"])))
-    lines.append(_row("Statements / policy (mean)",  _fmt(rp["stmts_mean"]),          _fmt(sp["stmts_mean"]),          _flag(rp["stmts_mean"],       sp["stmts_mean"],       1.5)))
-    lines.append(_row("Statements / policy (median)",_fmt(rp["stmts_median"]),        _fmt(sp["stmts_median"])))
-    lines.append(_row("Statements / policy (max)",   str(rp["stmts_max"]),            str(sp["stmts_max"])))
-    lines.append(_row("Wildcard-action policies",    f"{rp['wc_action_policies']} ({rp['wc_action_pct']})", f"{sp['wc_action_policies']} ({sp['wc_action_pct']})", _flag(_pct_to_f(rp["wc_action_pct"]), _pct_to_f(sp["wc_action_pct"]), 0.05)))
-    lines.append(_row("Wildcard-resource policies",  f"{rp['wc_resource_policies']} ({rp['wc_resource_pct']})", f"{sp['wc_resource_policies']} ({sp['wc_resource_pct']})"))
-    lines.append(_row("Allow ratio (of all stmts)",  _fmt(rp["allow_ratio"]),         _fmt(sp["allow_ratio"]),         _flag(rp["allow_ratio"],      sp["allow_ratio"],      0.05)))
-    lines.append(_row("Deny ratio (of all stmts)",   _fmt(rp["deny_ratio"]),          _fmt(sp["deny_ratio"])))
+    lines.append(_row("Row count", str(rp["n"]), str(sp["n"])))
+    lines.append(
+        _row(
+            "Labeled anomalies (n / %)",
+            f"{rp['n_anomaly']} / {rp['anomaly_pct']}",
+            f"{sp['n_anomaly']} / {sp['anomaly_pct']}",
+            _flag(rp["n_anomaly"] / rp["n"], sp["n_anomaly"] / sp["n"], 0.05),
+        )
+    )
+    lines.append(
+        _row(
+            "AttachmentCount mean",
+            _fmt(rp["attachment_mean"]),
+            _fmt(sp["attachment_mean"]),
+            _flag(rp["attachment_mean"], sp["attachment_mean"], 2),
+        )
+    )
+    lines.append(
+        _row(
+            "AttachmentCount median",
+            _fmt(rp["attachment_median"]),
+            _fmt(sp["attachment_median"]),
+            _flag(rp["attachment_median"], sp["attachment_median"], 2),
+        )
+    )
+    lines.append(
+        _row(
+            "AttachmentCount max", str(rp["attachment_max"]), str(sp["attachment_max"])
+        )
+    )
+    lines.append(
+        _row(
+            "Statements / policy (mean)",
+            _fmt(rp["stmts_mean"]),
+            _fmt(sp["stmts_mean"]),
+            _flag(rp["stmts_mean"], sp["stmts_mean"], 1.5),
+        )
+    )
+    lines.append(
+        _row(
+            "Statements / policy (median)",
+            _fmt(rp["stmts_median"]),
+            _fmt(sp["stmts_median"]),
+        )
+    )
+    lines.append(
+        _row("Statements / policy (max)", str(rp["stmts_max"]), str(sp["stmts_max"]))
+    )
+    lines.append(
+        _row(
+            "Wildcard-action policies",
+            f"{rp['wc_action_policies']} ({rp['wc_action_pct']})",
+            f"{sp['wc_action_policies']} ({sp['wc_action_pct']})",
+            _flag(_pct_to_f(rp["wc_action_pct"]), _pct_to_f(sp["wc_action_pct"]), 0.05),
+        )
+    )
+    lines.append(
+        _row(
+            "Wildcard-resource policies",
+            f"{rp['wc_resource_policies']} ({rp['wc_resource_pct']})",
+            f"{sp['wc_resource_policies']} ({sp['wc_resource_pct']})",
+        )
+    )
+    lines.append(
+        _row(
+            "Allow ratio (of all stmts)",
+            _fmt(rp["allow_ratio"]),
+            _fmt(sp["allow_ratio"]),
+            _flag(rp["allow_ratio"], sp["allow_ratio"], 0.05),
+        )
+    )
+    lines.append(
+        _row(
+            "Deny ratio (of all stmts)", _fmt(rp["deny_ratio"]), _fmt(sp["deny_ratio"])
+        )
+    )
     lines.append("")
 
     # Path distribution
@@ -306,7 +396,9 @@ def build_markdown(p: dict, u: dict, g: dict, r_roles: dict,
     lines.append("| Path | Real | Synthetic |")
     lines.append("| --- | --- | --- |")
     for path in all_paths:
-        lines.append(f"| `{path}` | {rp['path_dist'].get(path, '—')} | {sp['path_dist'].get(path, '—')} |")
+        lines.append(
+            f"| `{path}` | {rp['path_dist'].get(path, '—')} | {sp['path_dist'].get(path, '—')} |"
+        )
     lines.append("")
 
     # Version distribution
@@ -315,39 +407,88 @@ def build_markdown(p: dict, u: dict, g: dict, r_roles: dict,
     lines.append("| VersionId | Real | Synthetic |")
     lines.append("| --- | --- | --- |")
     for vid in all_vids:
-        lines.append(f"| `{vid}` | {rp['version_dist'].get(vid, '—')} | {sp['version_dist'].get(vid, '—')} |")
+        lines.append(
+            f"| `{vid}` | {rp['version_dist'].get(vid, '—')} | {sp['version_dist'].get(vid, '—')} |"
+        )
     lines.append("")
 
     # Users
     ru, su = u["real"], u["syn"]
     lines.append(_header("Users"))
-    lines.append(_row("Row count",                    str(ru["n"]),                  str(su["n"])))
-    lines.append(_row("AttachedPolicies mean",        _fmt(ru["attached_mean"]),     _fmt(su["attached_mean"]),     _flag(ru["attached_mean"], su["attached_mean"], 1)))
-    lines.append(_row("AttachedPolicies median",      _fmt(ru["attached_median"]),   _fmt(su["attached_median"])))
-    lines.append(_row("AttachedPolicies max",         str(ru["attached_max"]),       str(su["attached_max"])))
-    lines.append(_row("Users with 0 policies (%)",   ru["zero_pct"],               su["zero_pct"]))
+    lines.append(_row("Row count", str(ru["n"]), str(su["n"])))
+    lines.append(
+        _row(
+            "AttachedPolicies mean",
+            _fmt(ru["attached_mean"]),
+            _fmt(su["attached_mean"]),
+            _flag(ru["attached_mean"], su["attached_mean"], 1),
+        )
+    )
+    lines.append(
+        _row(
+            "AttachedPolicies median",
+            _fmt(ru["attached_median"]),
+            _fmt(su["attached_median"]),
+        )
+    )
+    lines.append(
+        _row("AttachedPolicies max", str(ru["attached_max"]), str(su["attached_max"]))
+    )
+    lines.append(_row("Users with 0 policies (%)", ru["zero_pct"], su["zero_pct"]))
     lines.append("")
 
     # Groups
     rg, sg = g["real"], g["syn"]
     lines.append(_header("Groups"))
-    lines.append(_row("Row count",                    str(rg["n"]),                  str(sg["n"])))
-    lines.append(_row("AttachedPolicies mean",        _fmt(rg["policies_mean"]),     _fmt(sg["policies_mean"])))
-    lines.append(_row("AttachedPolicies max",         str(rg["policies_max"]),       str(sg["policies_max"])))
-    lines.append(_row("Users per group mean",         _fmt(rg["users_mean"]),        _fmt(sg["users_mean"])))
-    lines.append(_row("Users per group max",          str(rg["users_max"]),          str(sg["users_max"])))
-    lines.append(_row("Groups with 0 policies (%)",  rg["empty_policy_pct"],       sg["empty_policy_pct"]))
-    lines.append(_row("Groups with 0 users (%)",     rg["empty_users_pct"],        sg["empty_users_pct"]))
+    lines.append(_row("Row count", str(rg["n"]), str(sg["n"])))
+    lines.append(
+        _row(
+            "AttachedPolicies mean",
+            _fmt(rg["policies_mean"]),
+            _fmt(sg["policies_mean"]),
+        )
+    )
+    lines.append(
+        _row("AttachedPolicies max", str(rg["policies_max"]), str(sg["policies_max"]))
+    )
+    lines.append(
+        _row("Users per group mean", _fmt(rg["users_mean"]), _fmt(sg["users_mean"]))
+    )
+    lines.append(
+        _row("Users per group max", str(rg["users_max"]), str(sg["users_max"]))
+    )
+    lines.append(
+        _row(
+            "Groups with 0 policies (%)", rg["empty_policy_pct"], sg["empty_policy_pct"]
+        )
+    )
+    lines.append(
+        _row("Groups with 0 users (%)", rg["empty_users_pct"], sg["empty_users_pct"])
+    )
     lines.append("")
 
     # Roles
     rr, sr = r_roles["real"], r_roles["syn"]
     lines.append(_header("Roles"))
-    lines.append(_row("Row count",                    str(rr["n"]),                  str(sr["n"])))
-    lines.append(_row("AttachedPolicies mean",        _fmt(rr["attached_mean"]),     _fmt(sr["attached_mean"])))
-    lines.append(_row("AttachedPolicies median",      _fmt(rr["attached_median"]),   _fmt(sr["attached_median"])))
-    lines.append(_row("AttachedPolicies max",         str(rr["attached_max"]),       str(sr["attached_max"])))
-    lines.append(_row("Roles with 0 policies (%)",   rr["zero_pct"],               sr["zero_pct"]))
+    lines.append(_row("Row count", str(rr["n"]), str(sr["n"])))
+    lines.append(
+        _row(
+            "AttachedPolicies mean",
+            _fmt(rr["attached_mean"]),
+            _fmt(sr["attached_mean"]),
+        )
+    )
+    lines.append(
+        _row(
+            "AttachedPolicies median",
+            _fmt(rr["attached_median"]),
+            _fmt(sr["attached_median"]),
+        )
+    )
+    lines.append(
+        _row("AttachedPolicies max", str(rr["attached_max"]), str(sr["attached_max"]))
+    )
+    lines.append(_row("Roles with 0 policies (%)", rr["zero_pct"], sr["zero_pct"]))
     lines.append("")
 
     # Fidelity breakdown
@@ -397,13 +538,16 @@ def _recommendations(p, u, g, r_roles, notes) -> str:
         )
 
     if not recs:
-        recs.append("Synthetic dataset is a reasonable structural match. Focus next on embedding-space overlap verification.")
+        recs.append(
+            "Synthetic dataset is a reasonable structural match. Focus next on embedding-space overlap verification."
+        )
     return "\n".join(f"{i+1}. {r}" for i, r in enumerate(recs))
 
 
 # ---------------------------------------------------------------------------
 # Console print
 # ---------------------------------------------------------------------------
+
 
 def print_summary(p, u, g, r_roles, score, notes):
     print("\n" + "=" * 65)
@@ -418,28 +562,58 @@ def print_summary(p, u, g, r_roles, score, notes):
     print(f"  {'Metric':<38} {'Real':>12}  {'Synthetic':>12}")
     print("  " + "-" * 64)
     rp, sp = p["real"], p["syn"]
-    row("Row count",                 rp["n"],                     sp["n"])
-    row("Anomalies (n)",             f"{rp['n_anomaly']} ({rp['anomaly_pct']})", f"{sp['n_anomaly']} ({sp['anomaly_pct']})", abs(rp["n_anomaly"]/rp["n"] - sp["n_anomaly"]/sp["n"]) > 0.05)
-    row("AttachmentCount median",    rp["attachment_median"],     sp["attachment_median"],    abs(rp["attachment_median"] - sp["attachment_median"]) > 3)
-    row("Statements/policy mean",    rp["stmts_mean"],            sp["stmts_mean"],           abs(rp["stmts_mean"] - sp["stmts_mean"]) > 1.5)
-    row("Wildcard-action (%)",       rp["wc_action_pct"],         sp["wc_action_pct"],        _pct_to_f(sp["wc_action_pct"]) > _pct_to_f(rp["wc_action_pct"]) + 0.05)
-    row("Allow ratio",               rp["allow_ratio"],           sp["allow_ratio"],          abs(rp["allow_ratio"] - sp["allow_ratio"]) > 0.05)
+    row("Row count", rp["n"], sp["n"])
+    row(
+        "Anomalies (n)",
+        f"{rp['n_anomaly']} ({rp['anomaly_pct']})",
+        f"{sp['n_anomaly']} ({sp['anomaly_pct']})",
+        abs(rp["n_anomaly"] / rp["n"] - sp["n_anomaly"] / sp["n"]) > 0.05,
+    )
+    row(
+        "AttachmentCount median",
+        rp["attachment_median"],
+        sp["attachment_median"],
+        abs(rp["attachment_median"] - sp["attachment_median"]) > 3,
+    )
+    row(
+        "Statements/policy mean",
+        rp["stmts_mean"],
+        sp["stmts_mean"],
+        abs(rp["stmts_mean"] - sp["stmts_mean"]) > 1.5,
+    )
+    row(
+        "Wildcard-action (%)",
+        rp["wc_action_pct"],
+        sp["wc_action_pct"],
+        _pct_to_f(sp["wc_action_pct"]) > _pct_to_f(rp["wc_action_pct"]) + 0.05,
+    )
+    row(
+        "Allow ratio",
+        rp["allow_ratio"],
+        sp["allow_ratio"],
+        abs(rp["allow_ratio"] - sp["allow_ratio"]) > 0.05,
+    )
 
     print(f"\n{'  USERS':}")
     ru, su = u["real"], u["syn"]
-    row("Row count",                 ru["n"],                     su["n"])
-    row("AttachedPolicies mean",     ru["attached_mean"],         su["attached_mean"],        abs(ru["attached_mean"] - su["attached_mean"]) > 2)
+    row("Row count", ru["n"], su["n"])
+    row(
+        "AttachedPolicies mean",
+        ru["attached_mean"],
+        su["attached_mean"],
+        abs(ru["attached_mean"] - su["attached_mean"]) > 2,
+    )
 
     print(f"\n{'  GROUPS':}")
     rg, sg = g["real"], g["syn"]
-    row("Row count",                 rg["n"],                     sg["n"])
-    row("AttachedPolicies mean",     rg["policies_mean"],         sg["policies_mean"])
-    row("Users/group mean",          rg["users_mean"],            sg["users_mean"])
+    row("Row count", rg["n"], sg["n"])
+    row("AttachedPolicies mean", rg["policies_mean"], sg["policies_mean"])
+    row("Users/group mean", rg["users_mean"], sg["users_mean"])
 
     print(f"\n{'  ROLES':}")
     rr, sr = r_roles["real"], r_roles["syn"]
-    row("Row count",                 rr["n"],                     sr["n"])
-    row("AttachedPolicies mean",     rr["attached_mean"],         sr["attached_mean"])
+    row("Row count", rr["n"], sr["n"])
+    row("AttachedPolicies mean", rr["attached_mean"], sr["attached_mean"])
 
     if notes:
         print("\n  FIDELITY GAPS:")
@@ -452,12 +626,25 @@ def print_summary(p, u, g, r_roles, score, notes):
 # Main
 # ---------------------------------------------------------------------------
 
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description="Side-by-side IAM dataset analysis")
-    p.add_argument("--real",        default="data/dataset.xlsx",                            help="Path to real workbook")
-    p.add_argument("--syn",         default="data/syntheticdataset/syntheticDataset.xlsx",  help="Path to synthetic workbook")
-    p.add_argument("--data-config", default="config/data.yaml",                             help="Pipeline data config")
-    p.add_argument("--out",         default="outputs/logs/dataset_sidebyside.md",           help="Markdown output path")
+    p.add_argument(
+        "--real", default="../data/merge_dataset.xlsx", help="Path to real workbook"
+    )
+    p.add_argument(
+        "--syn",
+        default="../data/syntheticdataset/syntheticDataset.xlsx",
+        help="Path to synthetic workbook",
+    )
+    p.add_argument(
+        "--data-config", default="../config/data.yaml", help="Pipeline data config"
+    )
+    p.add_argument(
+        "--out",
+        default="../outputs/logs/dataset_sidebyside.md",
+        help="Markdown output path",
+    )
     return p
 
 
@@ -469,11 +656,11 @@ def main() -> None:
     label_names = list(cfg.get("misconfigured_policies_by_name", []))
 
     print("Analysing policies...")
-    p      = analyse_policies(args.real, args.syn, label_names)
+    p = analyse_policies(args.real, args.syn, label_names)
     print("Analysing users...")
-    u      = analyse_attached(args.real, args.syn, "users",  "AttachedPolicies")
+    u = analyse_attached(args.real, args.syn, "users", "AttachedPolicies")
     print("Analysing groups...")
-    g      = analyse_groups(args.real, args.syn)
+    g = analyse_groups(args.real, args.syn)
     print("Analysing roles...")
     r_roles = analyse_attached(args.real, args.syn, "roles", "AttachedPolicies")
 

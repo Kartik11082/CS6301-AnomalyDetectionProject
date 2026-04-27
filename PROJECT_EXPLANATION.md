@@ -431,19 +431,19 @@ A natural next step is to run a second feature track alongside the Node2Vec vect
 | model                | tn  | fp  | fn  | tp  | precision | recall | f1    | roc_auc | pr_auc |
 | -------------------- | --- | --- | --- | --- | --------- | ------ | ----- | ------- | ------ |
 | one_class_svm        | 37  | 45  | 15  | 14  | 0.237     | 0.483  | 0.318 | 0.454   | 0.230  |
-| isolation_forest     | 77  |  5  | 29  |  0  | 0.000     | 0.000  | 0.000 | 0.484   | 0.245  |
-| local_outlier_factor | 80  |  2  | 29  |  0  | 0.000     | 0.000  | 0.000 | 0.434   | 0.226  |
-| elliptic_envelope    | 81  |  1  | 29  |  0  | 0.000     | 0.000  | 0.000 | 0.442   | 0.228  |
+| isolation_forest     | 77  | 5   | 29  | 0   | 0.000     | 0.000  | 0.000 | 0.484   | 0.245  |
+| local_outlier_factor | 80  | 2   | 29  | 0   | 0.000     | 0.000  | 0.000 | 0.434   | 0.226  |
+| elliptic_envelope    | 81  | 1   | 29  | 0   | 0.000     | 0.000  | 0.000 | 0.442   | 0.228  |
 
 **This is worse than the synthetic-only run, across the board, and the reason why is the most important finding of the project.**
 
 ### What each model is doing
 
 **Isolation Forest — collapsed. F1 = 0.000, ROC-AUC = 0.484 (below random).**
-In the synthetic-only run, IF achieved F1=0.62 and ROC-AUC=0.79. Now it flags 0 of the 29 anomalies (fn=29). Its ranking is also dead — ROC-AUC below 0.5 means its anomaly scores slightly *prefer* the normal class. IF has lost the ability to distinguish either structurally.
+In the synthetic-only run, IF achieved F1=0.62 and ROC-AUC=0.79. Now it flags 0 of the 29 anomalies (fn=29). Its ranking is also dead — ROC-AUC below 0.5 means its anomaly scores slightly _prefer_ the normal class. IF has lost the ability to distinguish either structurally.
 
 **Elliptic Envelope — also collapsed. F1 = 0.000, ROC-AUC = 0.442.**
-EE predicts 82/82 normals correctly (tn=81, fp=1) and misses every anomaly (fn=29). The robust Gaussian ellipsoid now *contains* every anomaly — the normal cloud got so wide after adding 500 real AWS policies that even the literal-`*` anomalies are inside it.
+EE predicts 82/82 normals correctly (tn=81, fp=1) and misses every anomaly (fn=29). The robust Gaussian ellipsoid now _contains_ every anomaly — the normal cloud got so wide after adding 500 real AWS policies that even the literal-`*` anomalies are inside it.
 
 **Local Outlier Factor — unchanged behavior, still flags nothing.** F1=0, ROC-AUC 0.434. The dense-cluster masking effect documented in the synthetic run persists — LOF's local-density comparison can't see anomalies that are clustered with similar-shaped peers.
 
@@ -465,22 +465,22 @@ To Node2Vec, these AWS-managed policies create the **same topology** as the synt
 
 ### The central empirical finding
 
-> **Node2Vec on the IAM graph is content-blind. It cannot distinguish a *legitimate* wildcard-heavy AWS-managed policy from a *misconfigured* wildcard-heavy custom policy, because they have the same graph shape.**
+> **Node2Vec on the IAM graph is content-blind. It cannot distinguish a _legitimate_ wildcard-heavy AWS-managed policy from a _misconfigured_ wildcard-heavy custom policy, because they have the same graph shape.**
 
 As long as the training set was purely synthetic and purely narrow, that limitation was hidden — the synthetic normals never used `"*"`, so wildcard shape = anomaly. The merged run exposes the truth: the models were learning "shape of synthetic normal" not "shape of legitimate AWS policy," and the decision boundary does not transfer.
 
 ### Comparison of the two runs
 
-| metric             | synthetic-only | merged (real + synthetic) | change     |
-| ------------------ | -------------- | ------------------------- | ---------- |
-| train normals      | 259            | ~709                      | +2.7x      |
-| anomaly ratio      | 8.0%           | 3.5%                      | down       |
-| IF F1              | 0.622          | 0.000                     | collapsed  |
-| IF ROC-AUC         | 0.791          | 0.484                     | → random   |
-| EE F1              | 0.387          | 0.000                     | collapsed  |
-| EE ROC-AUC         | 0.789          | 0.442                     | → random   |
-| OCSVM F1           | 0.350          | 0.318                     | stable     |
-| LOF F1             | 0.000          | 0.000                     | unchanged  |
+| metric        | synthetic-only | merged (real + synthetic) | change    |
+| ------------- | -------------- | ------------------------- | --------- |
+| train normals | 259            | ~709                      | +2.7x     |
+| anomaly ratio | 8.0%           | 3.5%                      | down      |
+| IF F1         | 0.622          | 0.000                     | collapsed |
+| IF ROC-AUC    | 0.791          | 0.484                     | → random  |
+| EE F1         | 0.387          | 0.000                     | collapsed |
+| EE ROC-AUC    | 0.789          | 0.442                     | → random  |
+| OCSVM F1      | 0.350          | 0.318                     | stable    |
+| LOF F1        | 0.000          | 0.000                     | unchanged |
 
 The ROC-AUC collapse from 0.79 → 0.44–0.48 is the headline: the rankings are no longer informative. This isn't a threshold-calibration problem anymore; it's a feature-space problem.
 
@@ -489,7 +489,7 @@ The ROC-AUC collapse from 0.79 → 0.44–0.48 is the headline: the rankings are
 1. **The synthetic-only results were an illusion of effectiveness.** The 0.62 F1 / 0.79 ROC-AUC looked credible but was an artifact of the synthetic normal class being narrower than real IAM usage.
 2. **The pipeline cannot be deployed against a realistic IAM corpus as-is.** In production you will always have AWS-managed policies in the dataset, and those will dominate the notion of "normal" in an unsupervised Node2Vec feature space.
 3. **This is not a bug in the models — it's a limit of the representation.** All four detectors worked fine on the synthetic data. None of them can recover a signal the embedding does not contain.
-4. **The fix is semantic features, and now it is not optional.** A usable detector on a realistic IAM corpus must see *what* a policy does, not just the shape of its subgraph. Features that would have saved this run:
+4. **The fix is semantic features, and now it is not optional.** A usable detector on a realistic IAM corpus must see _what_ a policy does, not just the shape of its subgraph. Features that would have saved this run:
    - `is_aws_managed` flag (derived from ARN: `arn:aws:iam::aws:policy/...`)
    - wildcard density: fraction of actions/resources that are `"*"` or `"svc:*"`
    - cross-account ARN presence (`arn:aws:...::*:role/*`)
