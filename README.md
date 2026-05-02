@@ -76,6 +76,25 @@ The included prior runs can be inspected without rerunning Neo4j:
 - `outputs/metrics/comparison_merged.md`
 - `outputs/metrics/comp.md`
 
+## Streamlit Visualization Demo
+
+Run the dashboard with:
+
+```bash
+streamlit run streamlit_app.py
+```
+
+The dashboard is designed for a class demo:
+
+- the page starts with snapshots `snapshot_00` through `snapshot_03`
+- one button applies the next online update, `snapshot_04`
+- page 1 shows the live update graph and a compact policy graph
+- page 2 shows policies learned over time and the top risky policies
+- page 3 shows the selected model's five core metrics on a fixed 0-1 bar chart
+- policy nodes are color-coded from saved model predictions: green for safe and red for risky
+- unscored demo policies default to green because the initial demo state is treated as verified
+- new policy input previews the projected graph shape
+
 ## Data Schema
 
 The default expected sheets and columns are configured in `config/data.yaml`.
