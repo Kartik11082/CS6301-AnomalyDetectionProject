@@ -11,6 +11,7 @@ Minimal end-to-end implementation of the workflow in `steps.md`:
 7. Train anomaly detectors
 8. Evaluate detector performance
 9. Update graph from old/new snapshots
+10. Simulate time-series online updates for future-work demos
 
 ## Project Structure
 
@@ -51,6 +52,30 @@ docker run -p7474:7474 -p7687:7687 -e NEO4J_AUTH=neo4j/password --env NEO4JLABS_
 
 3. Update credentials in `config/neo4j.yaml` if needed.
 
+## Minimum Working Demo
+
+The validation and dataset-analysis commands do not require Docker or Neo4j.
+Use this path first to confirm the repo works on a fresh machine:
+
+```bash
+python -m pip install -r requirements.txt
+python -m src.pipeline validate
+python -m src.analyze_datasets
+```
+
+Validation writes:
+
+- `outputs/logs/validation_report.json`
+- `outputs/logs/schema_report.json`
+- `outputs/logs/policy_parse_errors.csv`
+
+The included prior runs can be inspected without rerunning Neo4j:
+
+- `outputs/metrics/comparison_synth.md`
+- `outputs/metrics/comparison_real.md`
+- `outputs/metrics/comparison_merged.md`
+- `outputs/metrics/comp.md`
+
 ## Data Schema
 
 The default expected sheets and columns are configured in `config/data.yaml`.
@@ -71,10 +96,11 @@ Node labels:
 
 Relationship types:
 
-- `CONTAINS`
+- `ALLOWS`
+- `DENIES`
 - `WORKS_ON`
 - `WORKS_NOT_ON`
-- `IS_ATTACHED_TO`
+- `ATTACHED_TO`
 - `PART_OF`
 
 Graph counts are written to:
@@ -86,9 +112,9 @@ Graph counts are written to:
 Node2Vec is run on `Policy`-centered relationships configured in `config/model.yaml`:
 
 - default write property: `embeddingNode2vec`
-- default dimension: `128`
-- default iterations: `100`
-- default walk length: `5000`
+- default dimension: `64`
+- default iterations: `20`
+- default walk length: `80`
 
 Embedding diagnostics are written to:
 
@@ -129,6 +155,15 @@ Keep versions pinned via `requirements.txt` and set fixed seeds in `config/model
 
 ## How To Run
 
+### Validate workbook without Neo4j
+
+```bash
+python -m src.pipeline validate
+```
+
+To validate a different workbook, copy `config/data.yaml`, change
+`dataset_path`, and pass it with `--data-config`.
+
 ### Full pipeline
 
 ```bash
@@ -154,6 +189,30 @@ python -m src.pipeline update --old-data-config config/data.yaml --new-data-conf
 ```
 
 Start from `config/new_data.example.yaml` and set `dataset_path` for your new snapshot.
+
+### Simulate time-series online updates
+
+This future-work demo creates deterministic old/new workbook snapshots without
+requiring Neo4j:
+
+```bash
+python -m src.pipeline simulate-updates
+```
+
+Outputs:
+
+- `data/timeseries/snapshot_00.xlsx` through `snapshot_04.xlsx`
+- `config/timeseries/snapshot_00.yaml` through `snapshot_04.yaml`
+- `outputs/logs/timeseries_update_report.json`
+- `outputs/logs/timeseries_update_report.md`
+
+Each step adds one policy, deletes one normal policy, modifies one policy
+document, and updates one policy metadata field. The generated configs can be
+replayed later with the existing Neo4j update command:
+
+```bash
+python -m src.pipeline update --old-data-config config/timeseries/snapshot_00.yaml --new-data-config config/timeseries/snapshot_01.yaml
+```
 
 ## Notes
 

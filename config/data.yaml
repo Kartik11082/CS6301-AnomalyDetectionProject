@@ -1,4 +1,4 @@
-dataset_path: data\syntheticdataset\syntheticDataset.xlsx
+dataset_path: data/syntheticdataset/syntheticDataset.xlsx
 # dataset_path: data\merge_dataset.xlsx
 # dataset_path: data\dataset.xlsx
 

@@ -2,6 +2,7 @@ __pycache__/
 *.pyc
 .venv/
 outputs/logs/*.json
+!outputs/logs/timeseries_update_report.json
 outputs/logs/*.csv
 
 .claude

@@ -1,0 +1,88 @@
+{
+  "base_dataset_path": "data/syntheticdataset/syntheticDataset.xlsx",
+  "config_dir": "config/timeseries",
+  "config_paths": [
+    "config/timeseries/snapshot_00.yaml",
+    "config/timeseries/snapshot_01.yaml",
+    "config/timeseries/snapshot_02.yaml",
+    "config/timeseries/snapshot_03.yaml",
+    "config/timeseries/snapshot_04.yaml"
+  ],
+  "snapshot_dir": "data/timeseries",
+  "snapshot_paths": [
+    "data/timeseries/snapshot_00.xlsx",
+    "data/timeseries/snapshot_01.xlsx",
+    "data/timeseries/snapshot_02.xlsx",
+    "data/timeseries/snapshot_03.xlsx",
+    "data/timeseries/snapshot_04.xlsx"
+  ],
+  "step_reports": [
+    {
+      "added_count": 1,
+      "added_policy": "online-added-policy-step-01",
+      "deleted_count": 1,
+      "deleted_policy": "AmazonEC2ReadOnlyAccess-0000",
+      "document_changed_count": 1,
+      "metadata_changed_count": 1,
+      "metadata_updated_policy": "AWSKeyManagementServicePowerUser-0002",
+      "modified_policy": "IAMReadOnlyAccess-0001",
+      "step": 1
+    },
+    {
+      "added_count": 1,
+      "added_policy": "online-added-policy-step-02",
+      "deleted_count": 1,
+      "deleted_policy": "AWSKeyManagementServicePowerUser-0002",
+      "document_changed_count": 1,
+      "metadata_changed_count": 1,
+      "metadata_updated_policy": "IAMReadOnlyAccess-0004",
+      "modified_policy": "AmazonSNSReadOnlyAccess-0003",
+      "step": 2
+    },
+    {
+      "added_count": 1,
+      "added_policy": "online-added-policy-step-03",
+      "deleted_count": 1,
+      "deleted_policy": "IAMReadOnlyAccess-0004",
+      "document_changed_count": 1,
+      "metadata_changed_count": 1,
+      "metadata_updated_policy": "AmazonVPCReadOnlyAccess-0006",
+      "modified_policy": "AWSLambdaBasicExecutionRole-0005",
+      "step": 3
+    },
+    {
+      "added_count": 1,
+      "added_policy": "online-added-policy-step-04",
+      "deleted_count": 1,
+      "deleted_policy": "AmazonVPCReadOnlyAccess-0006",
+      "document_changed_count": 1,
+      "metadata_changed_count": 1,
+      "metadata_updated_policy": "AmazonSNSReadOnlyAccess-0008",
+      "modified_policy": "AmazonS3ReadOnlyAccess-0007",
+      "step": 4
+    }
+  ],
+  "steps": 4,
+  "update_pairs": [
+    {
+      "command": "python -m src.pipeline update --old-data-config config/timeseries/snapshot_00.yaml --new-data-config config/timeseries/snapshot_01.yaml",
+      "new_config": "config/timeseries/snapshot_01.yaml",
+      "old_config": "config/timeseries/snapshot_00.yaml"
+    },
+    {
+      "command": "python -m src.pipeline update --old-data-config config/timeseries/snapshot_01.yaml --new-data-config config/timeseries/snapshot_02.yaml",
+      "new_config": "config/timeseries/snapshot_02.yaml",
+      "old_config": "config/timeseries/snapshot_01.yaml"
+    },
+    {
+      "command": "python -m src.pipeline update --old-data-config config/timeseries/snapshot_02.yaml --new-data-config config/timeseries/snapshot_03.yaml",
+      "new_config": "config/timeseries/snapshot_03.yaml",
+      "old_config": "config/timeseries/snapshot_02.yaml"
+    },
+    {
+      "command": "python -m src.pipeline update --old-data-config config/timeseries/snapshot_03.yaml --new-data-config config/timeseries/snapshot_04.yaml",
+      "new_config": "config/timeseries/snapshot_04.yaml",
+      "old_config": "config/timeseries/snapshot_03.yaml"
+    }
+  ]
+}
