@@ -8,14 +8,8 @@ warnings.filterwarnings("ignore", category=RuntimeWarning, module="sklearn.covar
 
 from src.core.common import build_run_manifest, ensure_dirs, load_yaml, write_json
 from src.core.data_ops import load_and_normalize_tables
-from src.core.graph_ops import build_graph, run_node2vec, update_graph_from_snapshots
-from src.core.ml_ops import (
-    build_dataset_from_graph,
-    create_unsupervised_split,
-    evaluate_models,
-    grid_search_models,
-    train_models,
-)
+from src.core.timeseries_ops import simulate_time_series_updates
+from src.core.validation_ops import validate_dataset
 
 
 def _prepare_output_dirs() -> None:
@@ -41,6 +35,15 @@ def _load_configs(
 
 def run_full_pipeline(args: argparse.Namespace) -> None:
     """Run ingest -> normalize -> graph -> embed -> dataset -> split -> train -> evaluate."""
+    from src.core.graph_ops import build_graph, run_node2vec
+    from src.core.ml_ops import (
+        build_dataset_from_graph,
+        create_unsupervised_split,
+        evaluate_models,
+        grid_search_models,
+        train_models,
+    )
+
     _prepare_output_dirs()
     data_cfg, neo4j_cfg, model_cfg = _load_configs(
         args.data_config, args.neo4j_config, args.model_config
@@ -150,6 +153,8 @@ def run_full_pipeline(args: argparse.Namespace) -> None:
 
 def run_update_pipeline(args: argparse.Namespace) -> None:
     """Run old/new snapshot diff update for graph and embeddings."""
+    from src.core.graph_ops import update_graph_from_snapshots
+
     _prepare_output_dirs()
     old_data_cfg, neo4j_cfg, model_cfg = _load_configs(
         args.old_data_config, args.neo4j_config, args.model_config
@@ -167,12 +172,59 @@ def run_update_pipeline(args: argparse.Namespace) -> None:
     )
 
 
+def run_validate_pipeline(args: argparse.Namespace) -> None:
+    """Run no-DB workbook/schema/label validation."""
+    _prepare_output_dirs()
+    data_cfg = load_yaml(args.data_config)
+    report = validate_dataset(
+        data_cfg=data_cfg,
+        schema_report_path="outputs/logs/schema_report.json",
+        parse_error_log_path="outputs/logs/policy_parse_errors.csv",
+        validation_report_path=args.output,
+    )
+    status = "OK" if report["ok"] else "WARN"
+    print(f"[{status}] validation report written to {args.output}")
+    print(
+        "policies={total} parse_errors={errors} matched_labels={labels}".format(
+            total=report["policy_parse"]["total_policies"],
+            errors=report["policy_parse"]["parse_errors"],
+            labels=report["labels"]["matched_label_count"],
+        )
+    )
+
+
+def run_simulate_updates(args: argparse.Namespace) -> None:
+    """Generate deterministic time-series snapshots for online-update demos."""
+    _prepare_output_dirs()
+    data_cfg = load_yaml(args.data_config)
+    report = simulate_time_series_updates(
+        data_cfg=data_cfg,
+        steps=args.steps,
+        snapshot_dir=args.snapshot_dir,
+        config_dir=args.config_dir,
+        report_json_path=args.json_out,
+        report_md_path=args.markdown_out,
+    )
+    print(f"Wrote {len(report['snapshot_paths'])} snapshots to {report['snapshot_dir']}")
+    print(f"JSON report written to {args.json_out}")
+    print(f"Markdown report written to {args.markdown_out}")
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Create command line interface parser."""
     parser = argparse.ArgumentParser(
         description="IAM misconfiguration graph + anomaly detection pipeline."
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
+
+    validate_parser = subparsers.add_parser(
+        "validate", help="Validate workbook schema, policy parsing, and label coverage."
+    )
+    validate_parser.add_argument("--data-config", default="config/data.yaml", type=str)
+    validate_parser.add_argument(
+        "--output", default="outputs/logs/validation_report.json", type=str
+    )
+    validate_parser.set_defaults(func=run_validate_pipeline)
 
     run_parser = subparsers.add_parser("run", help="Run full pipeline.")
     run_parser.add_argument("--data-config", default="config/data.yaml", type=str)
@@ -198,6 +250,30 @@ def build_parser() -> argparse.ArgumentParser:
     update_parser.add_argument("--neo4j-config", default="config/neo4j.yaml", type=str)
     update_parser.add_argument("--model-config", default="config/model.yaml", type=str)
     update_parser.set_defaults(func=run_update_pipeline)
+
+    simulate_parser = subparsers.add_parser(
+        "simulate-updates",
+        help="Generate deterministic workbook snapshots for online-update demos.",
+    )
+    simulate_parser.add_argument("--data-config", default="config/data.yaml", type=str)
+    simulate_parser.add_argument("--steps", default=4, type=int)
+    simulate_parser.add_argument(
+        "--snapshot-dir", default="data/timeseries", type=str
+    )
+    simulate_parser.add_argument(
+        "--config-dir", default="config/timeseries", type=str
+    )
+    simulate_parser.add_argument(
+        "--json-out",
+        default="outputs/logs/timeseries_update_report.json",
+        type=str,
+    )
+    simulate_parser.add_argument(
+        "--markdown-out",
+        default="outputs/logs/timeseries_update_report.md",
+        type=str,
+    )
+    simulate_parser.set_defaults(func=run_simulate_updates)
 
     return parser
 

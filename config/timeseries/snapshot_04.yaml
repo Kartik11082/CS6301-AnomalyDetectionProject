@@ -1,0 +1,55 @@
+dataset_path: data/timeseries/snapshot_04.xlsx
+required_sheets:
+- policies
+- users
+- groups
+- roles
+required_columns:
+  policies:
+  - PolicyName
+  - PolicyId
+  - Arn
+  - PolicyObject
+  users:
+  - UserName
+  - UserId
+  - Arn
+  - AttachedPolicies
+  groups:
+  - GroupName
+  - GroupId
+  - Arn
+  - AttachedPolicies
+  - Users
+  roles:
+  - RoleName
+  - RoleId
+  - Arn
+  - AttachedPolicies
+misconfigured_policies_by_name:
+- tf-secmon-iam-policy
+- tf-splunk-ingestion-aws-addon-policy-master20200917101618881200000005
+- tf-customconfig-policy-master
+- tf-ds-tscm-lambda-policy
+- tf-aws-team-cf-cr
+- awt-role-boundary
+- awt-user-boundary
+- CloudabilityPolicy
+- PowerUserAccess
+- AdministratorAccess
+- AWSOpsWorksRegisterCLI
+- AWSCodeStarServiceRole
+- AWSApplicationMigrationReplicationServerPolicy
+- tf-s3-reader-all-buckets
+- tf-ec2-describe-all
+- tf-iam-user-management-broad
+- tf-sts-cross-account-assume
+- tf-lambda-deploy-broad
+- tf-kms-decrypt-broad
+- tf-data-pipeline-passrole
+- tf-logs-reader-all-accounts
+- tf-notaction-restricted-allow
+- tf-ssm-parameter-access-all
+- tf-secretsmanager-rotation-broad
+- tf-dynamodb-cross-account-stream
+misconfigured_policies_by_id: []
