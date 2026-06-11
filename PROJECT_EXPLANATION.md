@@ -511,3 +511,128 @@ None of the four is usable out of the box on this data. If forced to pick one un
 | Investigate the collapse itself | `elliptic_envelope`  | its 1.0 precision on synthetic vs 0.0 here is the clearest evidence |
 
 The right move is not to pick among these metrics but to treat them as a go-signal for adding the semantic feature track described above.
+
+---
+
+## Presentation Script
+
+### Slide 1 — Introduction
+
+- "This project is about automatically detecting security misconfigurations in AWS IAM — Identity and Access Management."
+- "IAM policies are JSON documents that define who can do what in a cloud environment. For example, a policy might say: allow this user to read files from this S3 bucket."
+- "The problem is that people make mistakes when writing these policies — they accidentally give too much access, like giving an intern admin privileges to the entire system. These are called misconfigurations."
+- "The most famous example is the 2019 Capital One breach — over 100 million customer records were exposed because of a single misconfigured IAM role. The attacker exploited it in minutes."
+- "The traditional approach to catching these is rule-based tools — you write a rule like 'flag any policy that uses Action star'. But rules only catch what someone already thought of. Novel misconfigurations get through."
+- "Our approach is different. We use unsupervised machine learning — we teach the system what a normal policy looks like, and then flag anything that looks abnormal, without needing to write rules for every possible mistake."
+- "The pipeline is based on this 2022 research paper by van Ede et al., which we implemented and extended."
+- "At a high level: we take IAM data from an Excel workbook, convert it into a graph in Neo4j, learn a vector embedding for each policy using Node2Vec, and run four anomaly detectors on those vectors."
+
+---
+
+### Slide 2 — System Architecture
+
+- "The system has three phases, which directly mirror the research paper."
+- "Phase one is Graph Construction. We take the raw Excel data — four sheets: policies, users, groups, and roles — parse every policy document, and load everything into Neo4j as a labeled property graph."
+- "Phase two is Graph Embedding. We run an algorithm called Node2Vec, which converts each Policy node in the graph into a 64-dimensional vector — essentially a list of 64 numbers that captures the structural shape of that policy."
+- "Phase three is Anomaly Detection. We train four unsupervised ML models on the embeddings of known-normal policies, then test them against held-out normals plus known misconfigured policies."
+- "The entire pipeline is config-driven — three YAML files control the data path, Neo4j credentials, and all ML hyperparameters. You can change the dataset or tune the models without touching any code."
+- "Every stage writes a diagnostic file to the outputs folder — graph_counts, embedding_report, split_summary — so the run is fully auditable."
+
+---
+
+### Slide 3 — Graph Schema
+
+- "Let me explain the graph structure, because this is where the core design lives."
+- "We have eight node types: Policy, Action, NotAction, Resource, NotResource, User, Group, and Role."
+- "The relationships are: a Policy ALLOWS or DENIES an Action. That Action WORKS_ON a Resource. Users, Groups, and Roles are ATTACHED_TO policies. Users are PART_OF groups."
+- "So for a simple policy that says 'allow s3:GetObject on this bucket', the graph looks like: Policy node → ALLOWS edge → Action node named s3:GetObject → WORKS_ON edge → Resource node named the bucket ARN."
+- "Now the most important design choice: every Action and Resource node carries a policyKey property. This means s3:GetObject used in Policy A and s3:GetObject used in Policy B are two completely separate nodes — not shared."
+- "Why? Because Node2Vec learns embeddings by doing random walks through the graph. If all policies shared the same Action nodes, every policy that uses s3:GetObject would get pulled toward the same region in the embedding space, regardless of how dangerous or safe each one is."
+- "By keeping Action and Resource nodes private per policy, each policy's random walks stay within its own subgraph. So the embedding reflects that specific policy's shape — how many actions it has, how many resources, whether it uses wildcards, whether it has deny statements."
+- "After loading our merged dataset of 820 policies, the graph has 325 Policy nodes, 1404 Action nodes, 616 Resource nodes, 200 Users, 25 Groups, 40 Roles, and about 4800 total relationships."
+
+---
+
+### Slide 4 — Node2Vec + Anomaly Detectors
+
+- "Once the graph is built, we run Node2Vec from Neo4j's Graph Data Science library."
+- "The intuition is this: imagine standing on a Policy node in the graph and taking a random walk — you step to an Action node, then to a Resource node, maybe back to another connected node, and so on. You do this hundreds of times."
+- "After all those walks, you have a detailed picture of that policy's neighborhood — how many actions it connects to, what kind of resources, whether it's densely connected or sparse."
+- "Node2Vec compresses all of that neighborhood information into a fixed-length vector of 64 numbers. We call this the embedding."
+- "Policies with similar graph structures end up with similar embeddings — they're close together in 64-dimensional space. Policies that look structurally weird will be far away from the cluster of normal policies."
+- "The hyperparameters we used: embedding dimension 64, walk length 80, 20 iterations, random seed 42 for reproducibility. Coverage was 100% — all 820 policies received embeddings."
+- "Now for the anomaly detection. We train four models, all unsupervised — meaning they only see normal policies during training. They learn the shape of 'normal' in that 64-dimensional space."
+- "Isolation Forest: builds random decision trees and tries to isolate each point. Points that are easy to isolate — short path to a leaf — are anomalies."
+- "Local Outlier Factor: for each point, it compares that point's local density to its neighbors' local densities. If your neighborhood is much less dense than your neighbors' neighborhoods, you're an outlier."
+- "One-Class SVM: learns a boundary in the embedding space that tightly wraps around the normal data. Anything outside that boundary is flagged as an anomaly."
+- "Elliptic Envelope: fits a statistical Gaussian distribution to the normal data and flags points that are far from the center — measured by Mahalanobis distance."
+- "The train/test split is: 90% of normal policies go into training. The remaining 10% of normals plus all 29 known anomalies go into the test set. The anomalies are completely hidden during training."
+
+---
+
+### Slide 5 — Implementation
+
+- "The code is organized into four core modules under src/core."
+- "data_ops.py handles ingestion and normalization. The raw Excel PolicyObject column is stored as Python repr text — single quotes, Python booleans — not valid JSON. So we have a repair function that converts it to proper JSON before parsing."
+- "graph_ops.py builds the Neo4j graph and runs Node2Vec. It uses Cypher queries via the Neo4j Python driver. The Node2Vec call goes through Neo4j's Graph Data Science plugin — we project a subgraph into memory, run gds.node2vec.write, and it writes the 64-float embedding back to each Policy node as a property."
+- "ml_ops.py handles everything after the graph: building the feature matrix X from the embeddings, constructing the label vector y, performing the train/test split, optional grid search, training all four models, and computing metrics."
+- "pipeline.py is the orchestrator. It's a CLI with two subcommands: run, which executes the full pipeline from scratch, and update, which does an incremental diff between an old and new snapshot."
+- "The update subcommand is worth mentioning — it diffs old and new workbooks by policy key, deletes only the changed or removed policies from the graph along with their private Action/Resource nodes, and rebuilds just those. This is much faster than rebuilding the entire graph every time."
+
+---
+
+### Slide 6 — Assumptions & What Was Not Implemented
+
+- "There are several important assumptions baked into this implementation that are worth being transparent about."
+- "First, labels are assigned purely by string matching — if the policy name is in the misconfigured_policies_by_name list in data.yaml, it gets label minus one. If a policy is renamed, it silently loses its anomaly label. There's no semantic labeling."
+- "Second, the pipeline requires Neo4j with the Graph Data Science plugin running locally via Docker. A bare Neo4j install will fail at the Node2Vec step because the gds.node2vec.write procedure won't exist."
+- "Now for what the paper describes but we did not implement."
+- "The paper compares against Cloud Custodian — a rule-based tool — as a baseline. We did not implement that comparison. Our steps.md marks it as optional and it was skipped."
+- "The paper uses 128-dimensional embeddings. We use 64. The performance difference is minor but the numbers are not directly comparable to the paper's reported results."
+- "The grid search in our implementation uses the test set for model selection. This is acknowledged — it's fine for a research pipeline, but it's not valid for a production performance claim because you're selecting hyperparameters based on the data you're testing on."
+- "We do not implement GraphSAGE, which the paper suggests as a future direction. We only implement Node2Vec."
+- "And there is no feedback loop — operators cannot confirm or deny alerts to retrain the model."
+
+---
+
+### Slide 7 — Input Screenshots
+
+- "On the left you can see the raw input — the Excel workbook with the policies sheet. Each row is one IAM policy. The key column is PolicyObject, which contains the full JSON policy document."
+- "On the right is the Neo4j Browser after the pipeline has run. Each colored cluster you see is one policy's subgraph — the central node is the Policy, the nodes fanning out from it are its Actions, and the nodes at the tips are its Resources."
+- "You can immediately see visually that some policies are sparse — just one or two action nodes — while others are dense with many connections. That structural difference is exactly what Node2Vec captures in the embedding."
+
+---
+
+### Slide 8 — Output / Results
+
+- "These are the metric results from two separate runs."
+- "On the synthetic-only dataset — 313 policies, all generated with controlled structure — the models performed reasonably. One-Class SVM got F1 of 0.69, Isolation Forest got 0.44. ROC-AUC values were 0.96 and 0.96 — meaning the ranking of policies by anomaly score was genuinely informative."
+- "Then we added 507 real AWS-managed policies to get the merged dataset of 820 total. And the results collapsed."
+- "Isolation Forest went from F1 0.44 to F1 zero. Elliptic Envelope from 0.39 to zero. Local Outlier Factor was already zero and stayed zero. Only One-Class SVM survived with F1 0.32 — but that's mostly from over-alerting, not real signal. Its precision is only 0.24."
+- "The ROC-AUC values are the most damning number. They dropped to 0.43 to 0.48 — which is below random. A random classifier gets 0.5. Our models are actively worse than guessing."
+- "This is not a bug. This is a finding."
+
+---
+
+### Slide 9 — Why It Collapsed (Root Cause)
+
+- "Let me explain exactly what happened, because this is the central finding of the project."
+- "In the synthetic dataset, normal policies had one to three short statements targeting specific ARNs. The anomalies had twelve to twenty-two actions all pointing at Resource star. The anomalies were structurally obvious — they stuck out geometrically in the embedding space."
+- "When we added real AWS-managed policies, we found that 413 out of 515 of them also use Resource star. Policies like AWSBackupAdminPolicy, AWSCodeDeployRole, AWSAppMeshReadOnly — these are legitimate, AWS-certified policies that also have many actions on wildcard resources."
+- "To Node2Vec, AWSBackupAdminPolicy and AdministratorAccess have the same graph topology. Many Action nodes, each connected to a Resource node named star. Identical subgraph shape. Identical embedding vector."
+- "Once those 500 real policies entered the training set as normal, the detectors learned that wildcard-heavy topology is normal. The synthetic anomalies became indistinguishable from legitimate AWS-managed policies."
+- "The core technical reason is that Node2Vec is topology-blind to content. The action named ec2:Describe-star and the action named ec2:DescribeInstances are both represented as a single Action node. One is a dangerous glob that covers hundreds of API calls. The other is a single specific read-only call. The graph cannot tell them apart because it only sees the node exists — not what the node name means."
+- "So the synthetic-only F1 of 0.62 was an illusion. The models were learning the shape of synthetic-normal, not the shape of legitimate AWS policy. The decision boundary did not transfer to real data."
+
+---
+
+### Slide 10 — Future Directions
+
+- "The fix is clear and specific: we need semantic features alongside the graph topology."
+- "The most important addition is an is_aws_managed flag — derived from the policy ARN. AWS-managed policies have ARNs in the format arn:aws:iam::aws:policy/... The double colon before 'aws' indicates it's AWS-owned, not a custom policy. Training only on custom policies, or adding this as a feature, immediately separates the two groups."
+- "Second, wildcard density — the fraction of Action and Resource nodes whose names contain star or service-colon-star. A normal custom policy rarely uses broad wildcards. A misconfigured one almost always does."
+- "Third, dangerous action flags — is iam:PassRole present? Is sts:AssumeRole present without a Condition block? These specific actions are well-known privilege escalation vectors and can be detected as binary features."
+- "Fourth, cross-account ARN presence — if a Resource ARN contains a wildcard account ID like arn:aws:iam::star:role/something, that's a red flag regardless of graph shape."
+- "The proposed fix is to concatenate a 10 to 20 dimensional semantic feature vector with the existing 64-dimensional Node2Vec embedding, giving the detectors 74 to 84 total features. The embedding captures shape. The semantic features capture content. Together they cover both the obvious wildcards and the subtle structural anomalies."
+- "Other longer-term directions from the paper: extend to Azure and Google Cloud IAM which follow the same graph-plus-embed pattern, try GraphSAGE which can incorporate node property values into the embedding — meaning the action name string matters, not just the topology — and add a feedback loop where security analysts confirm or deny alerts to retrain the model over time."
+- "The bottom line: the pipeline architecture is sound. The graph construction, Node2Vec embedding, and unsupervised training loop all work correctly. The limitation is the representation — and it's a solvable one."
